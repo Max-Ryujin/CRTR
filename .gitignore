@@ -1,0 +1,14 @@
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+results_*/
+
+SOKOBAN_PIPELINE_NOTES.md
+
+*.egg-info/
+Contrastive_Representations_for_Temporal_Reasoning.egg-info/
+
+*.pkl
+.gitattributes
+.history_max
