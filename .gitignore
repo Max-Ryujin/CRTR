@@ -12,3 +12,5 @@ Contrastive_Representations_for_Temporal_Reasoning.egg-info/
 *.pkl
 .gitattributes
 .history_max
+slurm
+*.log
