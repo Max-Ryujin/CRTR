@@ -7,6 +7,11 @@ class TrivialPolicy:
         self.env = env(shuffles=shuffles)
         self.env.reset()
 
+    def set_problem_context(self, problem_context):
+        if hasattr(self.env, 'set_problem_context'):
+            self.env.set_problem_context(problem_context)
+            self.env.reset()
+
     def build_goals(self, state):
         actions = self.env.get_all_actions()
         new_states = []

@@ -14,8 +14,21 @@ def solve_problem(solver, problem, jax_seed):
     set_seed(jax_seed)
 
     time_s = time.time()
-    input_state, solved_state = problem
-    solution, tree_metrics, root, trajectory_actions, additional_info = solver.solve(input_state, solved_state)
+    problem_context = None
+    if isinstance(problem, dict):
+        input_state = problem["input_state"]
+        solved_state = problem["solved_state"]
+        problem_context = problem.get("problem_context")
+    elif len(problem) == 3:
+        input_state, solved_state, problem_context = problem
+    else:
+        input_state, solved_state = problem
+
+    solution, tree_metrics, root, trajectory_actions, additional_info = solver.solve(
+        input_state,
+        solved_state,
+        problem_context=problem_context,
+    )
     time_solving = time.time() - time_s
     return dict(
         solution=solution,

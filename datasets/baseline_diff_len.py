@@ -68,7 +68,13 @@ class BaselineDatasetDiffLen():
             self._read_next_file()
             
         self.buffer_ind += n_traj        
-        current_buffer, current_lens = self.buffer[self.buffer_ind - n_traj:self.buffer_ind].to(torch.float32), self.buffer_lens[self.buffer_ind - n_traj:self.buffer_ind]
+        current_buffer = torch.as_tensor(
+            self.buffer[self.buffer_ind - n_traj:self.buffer_ind],
+            dtype=torch.float32,
+        )
+        current_lens = torch.as_tensor(
+            self.buffer_lens[self.buffer_ind - n_traj:self.buffer_ind]
+        )
 
         return current_buffer, current_lens
             

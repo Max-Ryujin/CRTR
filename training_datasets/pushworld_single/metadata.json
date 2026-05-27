@@ -1,0 +1,34 @@
+{
+  "grid_size": 12,
+  "max_width": 11,
+  "max_height": 12,
+  "max_num_objects": 3,
+  "encoder_name": "categorical_grid",
+  "output_kind": "grid_tokens",
+  "center_pad": true,
+  "num_cell_types": 10,
+  "planning_results_path": "/u/maximilian.kannen/work/pushworld/benchmark/solutions/level1",
+  "puzzles_path": "/u/maximilian.kannen/work/pushworld/benchmark/puzzles/level1",
+  "num_train_trajectories": 7,
+  "num_test_trajectories": 0,
+  "rollout_strategy_specs": [
+    {
+      "name": "expert",
+      "count": 1
+    },
+    {
+      "name": "solution_suffix",
+      "count": 2
+    },
+    {
+      "name": "epsilon_plan",
+      "count": 2,
+      "epsilon": 0.1
+    },
+    {
+      "name": "random_walk",
+      "count": 2,
+      "walk_length": 8
+    }
+  ]
+}

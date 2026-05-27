@@ -28,6 +28,10 @@ import search.solver
 import envs.sokoban.sokoban_env
 import envs.sokoban.gen_problems_sokoban
 
+import envs.pushworld.pushworld_env
+import envs.pushworld.gen_problems_pushworld
+import envs.pushworld.data
+
 import envs.rubik.utils.rubik_solver_utils
 
 @gin.configurable

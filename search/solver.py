@@ -46,7 +46,10 @@ class BestFSSolver():
     def construct_networks(self):
         self.value_estimator.construct_networks()
 
-    def solve(self, input, solved_state):
+    def solve(self, input, solved_state, problem_context=None):
+        if hasattr(self.goal_builder, 'set_problem_context'):
+            self.goal_builder.set_problem_context(problem_context)
+
         solved = False        
         root = SolverNode(input, None, 0, 0, [], False)
         nodes_queue = PriorityQueue()
