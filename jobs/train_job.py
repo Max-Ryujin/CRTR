@@ -67,11 +67,13 @@ class TrainJob():
 
         if test_path is None:
             self.test_dataloader = DataLoader(self.dataset, batch_size=self.batch_size, split='test')
+            trajectory_dataset = self.dataset
         else:
             self.test_dataset = dataset_class(path=test_path, device=self.device)
             self.test_dataloader = DataLoader(self.test_dataset, batch_size=self.batch_size, split='train')
+            trajectory_dataset = self.test_dataset
 
-        self.test_trajectories = [self.dataset._get_trajectory() for _ in range(n_test_traj)]
+        self.test_trajectories = [trajectory_dataset._get_trajectory() for _ in range(n_test_traj)]
 
         self.search_shuffles = search_shuffles
 
@@ -96,7 +98,7 @@ class TrainJob():
         self.optimizer.load_state_dict(optimizer_checkpoint)
 
 
-    def gen_plot_distances(self):        
+    def gen_plot_distances(self, step):        
         value_estimator = ValueEstimator(self.model, self.metric)
         all_distances = []
         for i, s in enumerate(self.test_trajectories):
@@ -105,10 +107,10 @@ class TrainJob():
 
         all_distances = np.array(all_distances).mean(axis=0) 
         plt.plot(np.arange(len(all_distances)), all_distances)
-        self.loggers.log_figure(f'avg distances solved', 0, plt.gcf())
+        self.loggers.log_figure(f'avg distances solved', step, plt.gcf())
         plt.clf()
 
-    def gen_plot_0(self):
+    def gen_plot_0(self, step):
         TRAJECTORIES_TO_ANALYSE = 20
         last_n = 10
 
@@ -142,10 +144,10 @@ class TrainJob():
                     alpha=0.6, s=20, color=distinct_colors[i])
             
         plt.tight_layout()
-        self.loggers.log_figure("t-sne reps", 0, plt.gcf())
+        self.loggers.log_figure("t-sne reps", step, plt.gcf())
         plt.clf()
             
-    def gen_plot_1(self):
+    def gen_plot_1(self, step):
         for traj in self.test_trajectories:
             with torch.no_grad():
                 traj = traj.to(self.device)
@@ -162,10 +164,10 @@ class TrainJob():
             plt.scatter(psi[:, 0], psi[:, 1], marker='.', c=np.arange(len(psi)), cmap='Reds')
 
         plt.gca().set_aspect('equal')
-        self.loggers.log_figure("All reps", 0, plt.gcf())
+        self.loggers.log_figure("All reps", step, plt.gcf())
         plt.clf()
 
-    def gen_plot_2(self):
+    def gen_plot_2(self, step):
         for i, s in enumerate(self.test_trajectories):
             if i == 4:
                 break
@@ -200,10 +202,10 @@ class TrainJob():
             plt.scatter(vec[:, 0], vec[:, 1], c=np.arange(len(vec)), cmap='Greys')
 
             plt.gca().set_aspect('equal')
-            self.loggers.log_figure(f'plot {i}', 0, plt.gcf())
+            self.loggers.log_figure(f'plot {i}', step, plt.gcf())
             plt.clf()
 
-    def gen_plot_monotonicity(self):
+    def gen_plot_monotonicity(self, step):
         value_estimator = ValueEstimator(self.model, self.metric)
         correlations = []
         for i, s in enumerate(self.test_trajectories):
@@ -215,15 +217,15 @@ class TrainJob():
             correlations.append(correlation)
             if i < 4:
 
-                self.loggers.log_scalar(f'correlation {i}', 0, correlation)
+                self.loggers.log_scalar(f'correlation {i}', step, correlation)
 
 
                 plt.plot(np.arange(distances.cpu().shape[-1]), distances.cpu())
 
-                self.loggers.log_figure(f'monotonicity {i}', 0, plt.gcf())
+                self.loggers.log_figure(f'monotonicity {i}', step, plt.gcf())
                 plt.clf()
         
-        self.loggers.log_scalar(f'correlation', 0, sum(correlations)/len(correlations))
+        self.loggers.log_scalar(f'correlation', step, sum(correlations)/len(correlations))
 
 
     def execute(self): 
@@ -265,16 +267,16 @@ class TrainJob():
 
                 if seen % (len(data) * 10000) == 0:
                     with torch.no_grad():
-                        self.gen_plot_monotonicity()
-                        self.gen_plot_0()
-                        self.gen_plot_1()
-                        self.gen_plot_2()
+                        self.gen_plot_monotonicity(seen)
+                        self.gen_plot_0(seen)
+                        self.gen_plot_1(seen)
+                        self.gen_plot_2(seen)
 
 # 
                         if self.do_eval and seen % (self.batch_size * self.solving_interval) == 0:
                             for shuffles in self.search_shuffles:
                                 eval_job = SolveJob(loggers=self.loggers, network=self.model, metric=self.metric, shuffles=shuffles)
-                                eval_job.execute()
+                                eval_job.execute(step=seen)
                                 break
                                 
                             self.save_checkpoint(seen)

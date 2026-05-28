@@ -1,6 +1,7 @@
 import gin
 import argparse
-import torch 
+import torch
+import os
 
 from utils import metric_logging
 
@@ -34,8 +35,20 @@ import envs.pushworld.data
 
 import envs.rubik.utils.rubik_solver_utils
 
+
 @gin.configurable
-def run(job_class, seed, output_dir):
+def run(
+    job_class,
+    seed,
+    output_dir,
+    use_wandb=False,
+    wandb_project=None,
+    wandb_entity=None,
+    wandb_run_name=None,
+    wandb_mode=None,
+    config_str=None,
+    gin_bindings=None,
+):
     random.seed(seed)
 
     np.random.seed(seed)
@@ -47,41 +60,84 @@ def run(job_class, seed, output_dir):
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
 
-    
     loggers = metric_logging.Loggers()
     loggers.register_logger(metric_logging.StdoutLogger(output_dir=output_dir))
 
-    loggers.log_property('seed', seed)
-    job = job_class(
-        loggers,
-        output_dir=output_dir
-    )
+    if use_wandb:
+        if not wandb_project:
+            raise ValueError("wandb_project must be set when use_wandb=True")
+        loggers.register_logger(
+            metric_logging.WandbLogger(
+                project=wandb_project,
+                entity=wandb_entity,
+                name=wandb_run_name,
+                output_dir=output_dir,
+                mode=wandb_mode,
+                config={
+                    "seed": seed,
+                    "output_dir": output_dir,
+                    "gin_config": config_str,
+                    "gin_bindings": gin_bindings or [],
+                },
+            )
+        )
 
-    job.execute()
+    loggers.log_property("seed", seed)
+    job = job_class(loggers, output_dir=output_dir)
+
+    try:
+        job.execute()
+    finally:
+        loggers.close()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_file", required=True, help="Path to the config file, e.g. 'configs/train/crl/rubik.gin'")
     parser.add_argument(
-        "--gin_bindings",          
-        nargs='*',                  
-        default=[],                
-        metavar='BIND',            
-        help='Gin bindings like "run.seed=123" "train_job_baseline.lr=1e-4"'
-    )  
-    parser.add_argument("--output_dir", required=False, help="Path to the logging directory", default=f"results_{time.strftime('%Y%m%d_%H%M%S')}")
+        "--config_file",
+        required=True,
+        help="Path to the config file, e.g. 'configs/train/crl/rubik.gin'",
+    )
+    parser.add_argument(
+        "--gin_bindings",
+        nargs="*",
+        default=[],
+        metavar="BIND",
+        help='Gin bindings like "run.seed=123" "train_job_baseline.lr=1e-4"',
+    )
+    parser.add_argument(
+        "--output_dir",
+        required=False,
+        help="Path to the logging directory",
+        default=f"results_{time.strftime('%Y%m%d_%H%M%S')}",
+    )
+    parser.add_argument(
+        "--use_wandb", action="store_true", help="Enable Weights & Biases logging"
+    )
+    parser.add_argument(
+        "--wandb_project", required=False, help="Weights & Biases project name"
+    )
+    parser.add_argument(
+        "--wandb_entity", required=False, help="Weights & Biases entity/team name"
+    )
+    parser.add_argument(
+        "--wandb_run_name", required=False, help="Optional Weights & Biases run name"
+    )
+    parser.add_argument(
+        "--wandb_mode",
+        required=False,
+        choices=["online", "offline", "disabled"],
+        help="Weights & Biases mode",
+    )
 
     args = parser.parse_args()
     gin.parse_config_files_and_bindings(
-        config_files=[args.config_file],
-        bindings=args.gin_bindings
-        )
-
+        config_files=[args.config_file], bindings=args.gin_bindings
+    )
 
     print("==== Final Config (after overrides) ====")
     config_str = gin.config_str()
     # Also write config and gin_bindings to a file in the output_dir
-    import os
     os.makedirs(args.output_dir, exist_ok=True)
     with open(os.path.join(args.output_dir, "hyperparameters.txt"), "w") as f:
         f.write("==== Final Config (after overrides) ====\n")
@@ -89,5 +145,14 @@ if __name__ == "__main__":
         f.write("\n\n==== gin_bindings argument ====\n")
         for binding in args.gin_bindings:
             f.write(f"{binding}\n")
-    
-    run(output_dir=args.output_dir)
+
+    run(
+        output_dir=args.output_dir,
+        use_wandb=args.use_wandb,
+        wandb_project=args.wandb_project,
+        wandb_entity=args.wandb_entity,
+        wandb_run_name=args.wandb_run_name,
+        wandb_mode=args.wandb_mode,
+        config_str=config_str,
+        gin_bindings=args.gin_bindings,
+    )
