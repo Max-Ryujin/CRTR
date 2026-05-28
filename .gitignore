@@ -14,3 +14,4 @@ Contrastive_Representations_for_Temporal_Reasoning.egg-info/
 .history_max
 slurm
 *.log
+slurm_cpu
