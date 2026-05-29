@@ -3,7 +3,7 @@ run.job_class = @TrainJob
 TrainJob.train_steps = 500000000
 TrainJob.batch_size = 512
 TrainJob.dataset_class = @ContrastiveDatasetDiffLen
-    ContrastiveDatasetDiffLen.double_batch = 2
+    ContrastiveDatasetDiffLen.double_batch = 1
     ContrastiveDatasetDiffLen.path = 'training_datasets/pushworld_large/train'
 
 TrainJob.metric = 'l2'

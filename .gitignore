@@ -15,3 +15,5 @@ Contrastive_Representations_for_Temporal_Reasoning.egg-info/
 slurm
 *.log
 slurm_cpu
+rendered_gifs/
+training_datasets/

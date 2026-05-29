@@ -23,15 +23,23 @@ def generate_problems_pushworld(
     encoder_name="categorical_grid",
     seed=0,
 ):
-    records = load_solution_records(
-        planning_results_path=planning_results_path,
-        puzzles_path=puzzles_path,
-        puzzle_names=puzzle_names,
-    )
-
+    metadata = None
+    effective_puzzle_names = puzzle_names
     if metadata_path is not None:
         with open(metadata_path, "r") as metadata_file:
             metadata = json.load(metadata_file)
+        if effective_puzzle_names is None:
+            selected_puzzles = metadata.get("selected_puzzles")
+            if selected_puzzles:
+                effective_puzzle_names = ",".join(selected_puzzles)
+
+    records = load_solution_records(
+        planning_results_path=planning_results_path,
+        puzzles_path=puzzles_path,
+        puzzle_names=effective_puzzle_names,
+    )
+
+    if metadata is not None:
         encoder = build_encoder_from_metadata(metadata)
     else:
         encoder = build_observation_encoder(
