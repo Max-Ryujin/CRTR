@@ -4,13 +4,13 @@ TrainJob.train_steps = 500000000
 TrainJob.batch_size = 512
 TrainJob.dataset_class = @ContrastiveDatasetDiffLen
     ContrastiveDatasetDiffLen.double_batch = 1
-    ContrastiveDatasetDiffLen.path = 'example_datasets/sokoban'
+    ContrastiveDatasetDiffLen.path = 'training_datasets/sokoban/train'
 
 TrainJob.metric = 'l2'
 TrainJob.search_shuffles = [-1]
 TrainJob.lr = 3e-4
 TrainJob.solving_interval = 50000
-TrainJob.test_path = 'example_datasets/sokoban'
+TrainJob.test_path = 'training_datasets/sokoban/test'
 TrainJob.model_type = @LNConvNet
     LNConvNet.input_size = 7
     LNConvNet.repr_dim = 64

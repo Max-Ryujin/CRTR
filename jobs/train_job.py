@@ -38,6 +38,7 @@ class TrainJob:
         solving_interval=None,
         tokenizer=tokenize_pair,
         eval_job_class=None,
+        eval_n_action_values=None,
         checkpoint_path=None,
         test_path=None,
     ):
@@ -51,7 +52,13 @@ class TrainJob:
         self.batch_size = batch_size
         self.lr = lr
         self.do_eval = do_eval
-        self.eval_job_class = eval_job_class
+        self.eval_job_class = eval_job_class or SolveJob
+        if eval_n_action_values is None:
+            self.eval_n_action_values = None
+        elif isinstance(eval_n_action_values, (list, tuple)):
+            self.eval_n_action_values = list(eval_n_action_values)
+        else:
+            self.eval_n_action_values = [eval_n_action_values]
         self.metric = metric
         self.output_dir = output_dir
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
@@ -82,6 +89,25 @@ class TrainJob:
         ]
 
         self.search_shuffles = search_shuffles
+
+    def _run_periodic_eval(self, step):
+        n_action_values = (
+            [None] if self.eval_n_action_values is None else self.eval_n_action_values
+        )
+
+        for shuffles in self.search_shuffles:
+            for n_actions in n_action_values:
+                eval_job_kwargs = {
+                    "loggers": self.loggers,
+                    "network": self.model,
+                    "metric": self.metric,
+                    "shuffles": shuffles,
+                }
+                if n_actions is not None:
+                    eval_job_kwargs["n_actions"] = n_actions
+
+                eval_job = self.eval_job_class(**eval_job_kwargs)
+                eval_job.execute(step=step)
 
     def save_checkpoint(self, step):
         model_checkpoint_path = f"{self.output_dir}/{step}/model.pt"
@@ -339,15 +365,7 @@ class TrainJob:
                             self.do_eval
                             and seen % (self.batch_size * self.solving_interval) == 0
                         ):
-                            for shuffles in self.search_shuffles:
-                                eval_job = SolveJob(
-                                    loggers=self.loggers,
-                                    network=self.model,
-                                    metric=self.metric,
-                                    shuffles=shuffles,
-                                )
-                                eval_job.execute(step=seen)
-                                break
+                            self._run_periodic_eval(seen)
 
                             self.save_checkpoint(seen)
 
