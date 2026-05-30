@@ -38,6 +38,7 @@ def solve_problem(solver, problem, jax_seed):
         trajectory_actions=trajectory_actions,
         time_solving=time_solving,
         input_problem=deepcopy(input_state),
+        problem_context=deepcopy(problem_context),
         additional_info=additional_info,
     )
 
@@ -141,7 +142,7 @@ class SolveJob:
     def log_solution_videos(self, results, solver, step):
         goal_builder = getattr(solver, "goal_builder", None)
         renderer = getattr(goal_builder, "env", None)
-        if renderer is None or not hasattr(renderer, "render"):
+        if renderer is None:
             return
 
         logged_videos = 0
@@ -150,17 +151,31 @@ class SolveJob:
             if solution is None:
                 continue
 
-            states = [np.asarray(node.state) for node in solution]
-            frames = []
-            for state in states:
-                frame = renderer.render(state)
-                if frame is None:
-                    frames = []
-                    break
-                frame = np.asarray(frame)
-                if frame.ndim == 2:
-                    frame = np.repeat(frame[..., None], 3, axis=-1)
-                frames.append(frame)
+            if hasattr(renderer, "render_solution"):
+                frames = renderer.render_solution(
+                    trajectory_actions=result.get("trajectory_actions"),
+                    problem_context=result.get("problem_context"),
+                )
+            elif hasattr(renderer, "render"):
+                problem_context = result.get("problem_context")
+                if problem_context is not None and hasattr(
+                    renderer, "set_problem_context"
+                ):
+                    renderer.set_problem_context(problem_context)
+
+                states = [np.asarray(node.state) for node in solution]
+                frames = []
+                for state in states:
+                    frame = renderer.render(state)
+                    if frame is None:
+                        frames = []
+                        break
+                    frame = np.asarray(frame)
+                    if frame.ndim == 2:
+                        frame = np.repeat(frame[..., None], 3, axis=-1)
+                    frames.append(frame)
+            else:
+                return
 
             if frames:
                 self.loggers.log_video(

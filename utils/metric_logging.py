@@ -1,8 +1,13 @@
 import sys
 import os
 from abc import ABC, abstractmethod
+import importlib
+import re
 
 import numpy as np
+
+
+imageio = importlib.import_module("imageio.v2")
 
 
 class AbsLogger(ABC):
@@ -92,6 +97,13 @@ class WandbLogger(AbsLogger):
         self.wandb = wandb
         self.run = wandb.init(**init_kwargs)
 
+    def _video_output_path(self, name, step):
+        base_dir = self.run.dir if self.run is not None else os.getcwd()
+        video_dir = os.path.join(base_dir, "logged_videos")
+        os.makedirs(video_dir, exist_ok=True)
+        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("_") or "video"
+        return os.path.join(video_dir, f"{step}_{safe_name}.gif")
+
     def _to_scalar(self, value):
         if hasattr(value, "detach"):
             value = value.detach()
@@ -118,9 +130,13 @@ class WandbLogger(AbsLogger):
             )
         if frames.shape[-1] == 1:
             frames = np.repeat(frames, 3, axis=-1)
-        frames = np.transpose(frames, (0, 3, 1, 2))
+        if np.issubdtype(frames.dtype, np.floating):
+            frames = np.clip(frames, 0, 255)
+        frames = frames.astype(np.uint8, copy=False)
+        video_path = self._video_output_path(name, step)
+        imageio.mimsave(video_path, frames, duration=1.0 / fps)
         self.wandb.log(
-            {name: self.wandb.Video(frames, fps=fps, format="mp4")}, step=step
+            {name: self.wandb.Video(video_path, fps=fps, format="gif")}, step=step
         )
 
     def log_property(self, name, value):

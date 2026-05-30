@@ -7,6 +7,7 @@ import numpy as np
 from envs.pushworld.data import build_encoder_from_metadata
 from envs.pushworld.data import build_observation_encoder
 from envs.pushworld.data import load_solution_records
+from envs.pushworld.puzzle import Actions
 from envs.pushworld.puzzle import NUM_ACTIONS, PushWorldPuzzle
 
 
@@ -97,3 +98,47 @@ class CustomPushWorldEnv:
 
     def get_all_actions(self):
         return list(range(NUM_ACTIONS))
+
+    def render(self, state, border_width=2, pixels_per_cell=20):
+        raw_state = self._lookup_raw_state(state)
+        return self._current_puzzle.render(
+            raw_state,
+            border_width=border_width,
+            pixels_per_cell=pixels_per_cell,
+        )
+
+    def render_solution(
+        self,
+        trajectory_actions,
+        problem_context,
+        border_width=2,
+        pixels_per_cell=20,
+    ):
+        if not trajectory_actions or problem_context is None:
+            return []
+
+        puzzle = PushWorldPuzzle(problem_context["puzzle_file_path"])
+        state = tuple(
+            tuple(position) for position in problem_context["initial_raw_state"]
+        )
+        frames = [
+            puzzle.render(
+                state,
+                border_width=border_width,
+                pixels_per_cell=pixels_per_cell,
+            )
+        ]
+
+        for action in trajectory_actions:
+            if isinstance(action, str):
+                action = Actions.FROM_CHAR[action]
+            state = puzzle.get_next_state(state, action)
+            frames.append(
+                puzzle.render(
+                    state,
+                    border_width=border_width,
+                    pixels_per_cell=pixels_per_cell,
+                )
+            )
+
+        return frames
