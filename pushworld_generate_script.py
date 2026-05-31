@@ -147,6 +147,10 @@ class StartStateBundle:
     plans: List[StartStatePlan]
 
 
+def has_remaining_actions(plan: StartStatePlan) -> bool:
+    return 0 <= plan.prefix_length < len(plan.actions)
+
+
 class PushWorldPuzzleSerializer:
     def __init__(self, puzzle: PushWorldPuzzle):
         width, height = puzzle.dimensions
@@ -195,7 +199,7 @@ class PushWorldPuzzleSerializer:
 def parse_comma_separated_names(puzzle_names: Optional[str]) -> Optional[List[str]]:
     if puzzle_names is None:
         return None
-    names = [name.strip() for name in puzzle_names.split(",") if name.strip()]
+    names = [Path(name.strip()).stem for name in puzzle_names.split(",") if name.strip()]
     return names or None
 
 
@@ -386,6 +390,8 @@ def solve_states_in_parallel(
 
 
 def add_plan_if_unique(bundle: StartStateBundle, plan: StartStatePlan):
+    if not has_remaining_actions(plan):
+        return
     existing = {existing_plan.plan_string for existing_plan in bundle.plans}
     if plan.plan_string not in existing:
         bundle.plans.append(plan)
@@ -550,6 +556,8 @@ def generate_start_state_bundles_for_record(
             ):
                 if solve_result.plan is None:
                     continue
+                if not solve_result.plan:
+                    continue
                 full_plan = list(prefix_actions) + list(solve_result.plan)
                 full_plan_string = plan_to_string(full_plan)
                 if any(
@@ -578,7 +586,11 @@ def build_examples_for_split(records: Sequence[dict], bundles_by_puzzle_name):
         puzzle = PushWorldPuzzle(record["puzzle_file_path"])
         for bundle in bundles_by_puzzle_name.get(record["puzzle_name"], []):
             for plan in bundle.plans:
+                if not has_remaining_actions(plan):
+                    continue
                 trajectory = rollout_from_state(puzzle, bundle.state, plan.actions)
+                if len(trajectory) <= 1:
+                    continue
                 examples.append(
                     {
                         "puzzle_name": record["puzzle_name"],
@@ -679,6 +691,7 @@ def generate_pushworld_dataset_with_cpp_planner(
     test_fraction=0.2,
     seed=0,
     puzzle_names=None,
+    exclude_puzzle_names=None,
     grid_size=None,
     center_pad=True,
     encoder_name="categorical_grid",
@@ -709,6 +722,7 @@ def generate_pushworld_dataset_with_cpp_planner(
         planning_results_path=planning_results_path,
         puzzles_path=puzzles_path,
         puzzle_names=None if selected_names is None else ",".join(selected_names),
+        exclude_puzzle_names=exclude_puzzle_names,
     )
     records = select_records(records, num_puzzles=num_puzzles, seed=seed)
 
@@ -836,6 +850,7 @@ def main():
     parser.add_argument("--test_fraction", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--puzzle_names", default=None)
+    parser.add_argument("--exclude_puzzle_names", default=None)
     parser.add_argument("--grid_size", type=int, default=None)
     parser.add_argument("--encoder_name", default="categorical_grid")
     parser.add_argument("--rollout_strategies_json", default=None)
@@ -873,6 +888,7 @@ def main():
             test_fraction=args.test_fraction,
             seed=args.seed,
             puzzle_names=args.puzzle_names,
+            exclude_puzzle_names=args.exclude_puzzle_names,
             grid_size=args.grid_size,
             center_pad=center_pad,
             encoder_name=args.encoder_name,
@@ -887,6 +903,7 @@ def main():
         test_fraction=args.test_fraction,
         seed=args.seed,
         puzzle_names=args.puzzle_names,
+        exclude_puzzle_names=args.exclude_puzzle_names,
         grid_size=args.grid_size,
         center_pad=center_pad,
         encoder_name=args.encoder_name,

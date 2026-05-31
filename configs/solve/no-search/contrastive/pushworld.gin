@@ -27,7 +27,7 @@ run.job_class = @SolveJob
     BestFSSolver.max_tree_size = 6000
     BestFSSolver.max_tree_depth = -1
     BestFSSolver.value_estimator_class = @ValueEstimator
-    BestFSSolver.checkpoint_path = 'results_pushworld_CRTR_large/76800000/model.pt'
+    BestFSSolver.checkpoint_path = 'results_pushworld_CRTR_complete/76800000/model.pt'
     
     SolveJob.n_jobs = 1000
     SolveJob.n_parallel_workers = 1

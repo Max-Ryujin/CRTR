@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -210,7 +211,9 @@ class RolloutStrategySpec:
 def parse_puzzle_names(puzzle_names: Optional[str]) -> Optional[Sequence[str]]:
     if puzzle_names is None:
         return None
-    parsed_names = [name.strip() for name in puzzle_names.split(",") if name.strip()]
+    parsed_names = [
+        Path(name.strip()).stem for name in puzzle_names.split(",") if name.strip()
+    ]
     return parsed_names if parsed_names else None
 
 
@@ -218,10 +221,13 @@ def load_solution_records(
     planning_results_path: str,
     puzzles_path: str,
     puzzle_names: Optional[str] = None,
+    exclude_puzzle_names: Optional[str] = None,
 ) -> List[dict]:
     puzzle_paths = get_puzzle_file_paths(puzzles_path)
     selected_puzzle_names = parse_puzzle_names(puzzle_names)
+    excluded_puzzle_names = parse_puzzle_names(exclude_puzzle_names)
     selected_set = None if selected_puzzle_names is None else set(selected_puzzle_names)
+    excluded_set = None if excluded_puzzle_names is None else set(excluded_puzzle_names)
 
     records = []
     for solution_file_path in sorted(
@@ -235,6 +241,8 @@ def load_solution_records(
         if puzzle_name is None or not plan_string:
             continue
         if selected_set is not None and puzzle_name not in selected_set:
+            continue
+        if excluded_set is not None and puzzle_name in excluded_set:
             continue
         if puzzle_name not in puzzle_paths:
             raise ValueError(f'Could not find puzzle file for solution "{puzzle_name}"')
@@ -559,6 +567,7 @@ def generate_pushworld_dataset(
     test_fraction=0.2,
     seed=0,
     puzzle_names=None,
+    exclude_puzzle_names=None,
     grid_size=None,
     center_pad=True,
     encoder_name="categorical_grid",
@@ -569,6 +578,7 @@ def generate_pushworld_dataset(
         planning_results_path=planning_results_path,
         puzzles_path=puzzles_path,
         puzzle_names=puzzle_names,
+        exclude_puzzle_names=exclude_puzzle_names,
     )
     encoder = build_observation_encoder(
         records=records,

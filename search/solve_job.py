@@ -148,23 +148,27 @@ class SolveJob:
         logged_videos = 0
         for result in results:
             solution = result.get("solution")
-            if solution is None:
-                continue
+            frames = []
 
             if hasattr(renderer, "render_solution"):
                 frames = renderer.render_solution(
                     trajectory_actions=result.get("trajectory_actions"),
                     problem_context=result.get("problem_context"),
                 )
-            elif hasattr(renderer, "render"):
+
+            if not frames and hasattr(renderer, "render"):
                 problem_context = result.get("problem_context")
                 if problem_context is not None and hasattr(
                     renderer, "set_problem_context"
                 ):
                     renderer.set_problem_context(problem_context)
 
-                states = [np.asarray(node.state) for node in solution]
-                frames = []
+                states = []
+                if solution is not None:
+                    states = [np.asarray(node.state) for node in solution]
+                elif result.get("input_problem") is not None:
+                    states = [np.asarray(result.get("input_problem"))]
+
                 for state in states:
                     frame = renderer.render(state)
                     if frame is None:
@@ -174,7 +178,9 @@ class SolveJob:
                     if frame.ndim == 2:
                         frame = np.repeat(frame[..., None], 3, axis=-1)
                     frames.append(frame)
-            else:
+            if not hasattr(renderer, "render_solution") and not hasattr(
+                renderer, "render"
+            ):
                 return
 
             if frames:

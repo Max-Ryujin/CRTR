@@ -18,6 +18,7 @@ def generate_problems_pushworld(
     puzzles_path,
     metadata_path=None,
     puzzle_names=None,
+    exclude_puzzle_names=None,
     grid_size=None,
     center_pad=True,
     encoder_name="categorical_grid",
@@ -37,6 +38,7 @@ def generate_problems_pushworld(
         planning_results_path=planning_results_path,
         puzzles_path=puzzles_path,
         puzzle_names=effective_puzzle_names,
+        exclude_puzzle_names=exclude_puzzle_names,
     )
 
     if metadata is not None:

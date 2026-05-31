@@ -19,6 +19,7 @@ class CustomPushWorldEnv:
         puzzles_path,
         metadata_path: Optional[str] = None,
         puzzle_names: Optional[str] = None,
+        exclude_puzzle_names: Optional[str] = None,
         grid_size: Optional[int] = None,
         center_pad: bool = True,
         encoder_name: str = "categorical_grid",
@@ -33,6 +34,7 @@ class CustomPushWorldEnv:
                 planning_results_path=planning_results_path,
                 puzzles_path=puzzles_path,
                 puzzle_names=puzzle_names,
+                exclude_puzzle_names=exclude_puzzle_names,
             )
             self.encoder = build_observation_encoder(
                 records=records,
